@@ -17,6 +17,8 @@ public class AssessmentService {
     public Assessment createAssessment(AssessmentRequest request, User user) {
         Assessment assessment = new Assessment();
         assessment.setScore(request.getScore());
+        assessment.setAssessmentType(request.getAssessmentType());
+        assessment.setResponses(request.getResponses()); // Store as JSON string
         assessment.setTimestamp(LocalDateTime.now());
         assessment.setUser(user);
         return assessmentRepository.save(assessment);

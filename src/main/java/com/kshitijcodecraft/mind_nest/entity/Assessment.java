@@ -12,6 +12,8 @@ public class Assessment {
     private Long id;
     private int score;
     private LocalDateTime timestamp;
+    private String assessmentType; // e.g., "PHQ-9", "GAD-7"
+    private String responses; // JSON string of user's answers (optional)
 
     @ManyToOne
     @JoinColumn(name = "user_id")
