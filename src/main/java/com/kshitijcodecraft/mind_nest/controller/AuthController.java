@@ -2,8 +2,10 @@ package com.kshitijcodecraft.mind_nest.controller;
 
 import com.kshitijcodecraft.mind_nest.dto.AuthResponse;
 import com.kshitijcodecraft.mind_nest.dto.LoginRequest;
+import com.kshitijcodecraft.mind_nest.dto.RefreshTokenRequest;
 import com.kshitijcodecraft.mind_nest.dto.SignupRequest;
 import com.kshitijcodecraft.mind_nest.entity.User;
+import com.kshitijcodecraft.mind_nest.exception.CustomException;
 import com.kshitijcodecraft.mind_nest.repository.UserRepository;
 import com.kshitijcodecraft.mind_nest.security.CustomUserDetails;
 import com.kshitijcodecraft.mind_nest.security.JwtUtils;
@@ -62,6 +64,7 @@ public class AuthController {
         return ResponseEntity.ok(
                 new AuthResponse(
                         jwt,
+                        user.getRefreshToken(),
                         user.getId(),
                         user.getEmail(),
                         user.getRole()
@@ -84,14 +87,52 @@ public class AuthController {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User user = userDetails.getUser();
 
-        String jwt = jwtUtils.generateToken(user.getEmail());
+        String accessToken = jwtUtils.generateToken(user.getEmail());
+        String refreshToken = jwtUtils.generateRefreshToken(userDetails);
+
+        // Save refresh token to user
+        user.setRefreshToken(refreshToken);
+        userRepository.save(user);
+
         return ResponseEntity.ok(
                 new AuthResponse(
-                        jwt,
+                        accessToken,
+                        refreshToken,
                         user.getId(),
                         user.getEmail(),
                         user.getRole()
                 )
         );
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
+        String refreshToken = request.getRefreshToken();
+
+        // Validate refresh token
+        if (!jwtUtils.validateToken(refreshToken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
+        }
+
+        // Extract username and generate new tokens
+        String email = jwtUtils.extractUsername(refreshToken);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException("User not found"));
+
+
+        String newAccessToken = jwtUtils.generateToken(user.getEmail());
+        String newRefreshToken = jwtUtils.generateRefreshToken(user);
+
+        // Update user's refresh token in DB
+        user.setRefreshToken(newRefreshToken);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new AuthResponse(
+                newAccessToken,
+                newRefreshToken,
+                user.getId(),
+                user.getEmail(),
+                user.getRole()
+        ));
     }
 }
