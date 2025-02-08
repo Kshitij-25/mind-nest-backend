@@ -16,7 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 // UserProfileController.java
 @RestController
-@RequestMapping("/api/v1/profiles")
+@RequestMapping("/api/profiles")
 @RequiredArgsConstructor
 public class UserProfileController {
     private final UserProfileService userProfileService;
