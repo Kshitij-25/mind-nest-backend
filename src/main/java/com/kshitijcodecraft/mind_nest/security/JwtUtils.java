@@ -21,7 +21,7 @@ public class JwtUtils {
     private String secret;  // Inject secret from application.properties
 
     @Value("${jwt.refreshExpirationMs}")
-    private int refreshExpirationMs;
+    private long refreshExpirationMs;
 
     private Key key;  // Cryptographic key
 
