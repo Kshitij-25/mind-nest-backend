@@ -3,7 +3,7 @@ services:
     name: spring-boot-app
     env: java
     buildCommand: ./mvnw clean package
-    startCommand: java -jar target/your-app.jar --server.port=10000
+    startCommand: java -jar target/mind-nest-0.0.1-SNAPSHOT.jar  --server.port=10000
     envVars:
       - key: SERVER_PORT
         value: 10000
