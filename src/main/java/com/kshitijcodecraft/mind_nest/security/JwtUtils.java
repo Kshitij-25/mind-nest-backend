@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -14,10 +15,25 @@ import java.util.function.Function;
 
 @Component
 public class JwtUtils {
-    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    private final long jwtExpiration = 86400000; // 24 hours
+
+
+    @Value("${jwt.secret}")
+    private String secret;  // Inject secret from application.properties
+
+    @Value("${jwt.refreshExpirationMs}")
+    private int refreshExpirationMs;
+
+    private Key key;  // Cryptographic key
+
+    @PostConstruct
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());  // Convert secret to Key
+    }
+
 
     public String generateToken(String email) {
+        // 24 hours
+        long jwtExpiration = 86400000;
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date())
@@ -63,16 +79,13 @@ public class JwtUtils {
                 .getBody();
     }
 
-    @Value("${jwt.refreshExpirationMs}")
-    private int refreshExpirationMs;
-
     // Generate refresh token (longer-lived)
     public String generateRefreshToken(UserDetails userDetails) {
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + refreshExpirationMs))
-                .signWith(SignatureAlgorithm.HS512, secret)
+                .signWith(key)  // Replaced deprecated method with Key-based signing
                 .compact();
     }
 }
