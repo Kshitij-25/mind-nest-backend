@@ -1,14 +1,13 @@
 package com.kshitijcodecraft.mind_nest.controller;
 
-import com.kshitijcodecraft.mind_nest.dto.AuthResponse;
-import com.kshitijcodecraft.mind_nest.dto.LoginRequest;
-import com.kshitijcodecraft.mind_nest.dto.RefreshTokenRequest;
-import com.kshitijcodecraft.mind_nest.dto.SignupRequest;
+import com.kshitijcodecraft.mind_nest.dto.*;
 import com.kshitijcodecraft.mind_nest.entity.User;
+import com.kshitijcodecraft.mind_nest.entity.UserProfile;
 import com.kshitijcodecraft.mind_nest.exception.CustomException;
 import com.kshitijcodecraft.mind_nest.repository.UserRepository;
 import com.kshitijcodecraft.mind_nest.security.CustomUserDetails;
 import com.kshitijcodecraft.mind_nest.security.JwtUtils;
+import com.kshitijcodecraft.mind_nest.service.ProfileService;
 import com.kshitijcodecraft.mind_nest.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -32,6 +32,7 @@ public class AuthController {
     private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
+    private final ProfileService profileService;
 
     @GetMapping("/check-email")
     public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestParam String email) {
@@ -41,68 +42,83 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@RequestBody SignupRequest signupRequest) {
-        // 1. Check if email exists
-        if (userRepository.existsByEmail(signupRequest.getEmail())) {
-            return ResponseEntity
-                    .badRequest()
-                    .body("Error: Email is already in use!");
+    public ResponseEntity<ApiResponse> registerUser(@RequestBody SignupRequest signupRequest) {
+        try{
+            // 1. Check if email exists
+            if (userRepository.existsByEmail(signupRequest.getEmail())) {
+                return  ResponseEntity
+                        .badRequest()
+                        .body(new ApiResponse<>("Email is already in use!", HttpStatus.BAD_REQUEST.value(), null));
+            }
+
+            // 2. Create new user
+            User user = new User();
+            user.setEmail(signupRequest.getEmail());
+            user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
+            user.setRole(signupRequest.getRole());
+            userRepository.save(user);
+
+            // 3. Generate JWT token
+//            String jwt = jwtUtils.generateToken(user.getEmail());
+            return  ResponseEntity
+                    .ok()
+                    .body(new ApiResponse<>("User successfully registered", HttpStatus.OK.value(), null));
+        }catch (CustomException e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(e.getMessage(), HttpStatus.BAD_REQUEST.value(), null));
         }
-
-        // 2. Create new user
-        User user = new User();
-        user.setEmail(signupRequest.getEmail());
-        user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
-        user.setRole(signupRequest.getRole());
-//        user.setFirstName(signupRequest.getFirstName());
-//        user.setLastName(signupRequest.getLastName());
-
-        userRepository.save(user);
-
-        // 3. Generate JWT token
-        String jwt = jwtUtils.generateToken(user.getEmail());
-        return ResponseEntity.ok(
-                new AuthResponse(
-                        jwt,
-                        user.getRefreshToken(),
-                        user.getId(),
-                        user.getEmail(),
-                        user.getRole()
-                )
-        );
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getEmail(),
-                        loginRequest.getPassword()
-                )
-        );
+    public ResponseEntity<ApiResponse> authenticateUser(@RequestBody LoginRequest loginRequest) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
+            );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // ✅ Get CustomUserDetails instead of casting
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        User user = userDetails.getUser();
+            // ✅ Correct way to get CustomUserDetails
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            User user = userDetails.getUser();  // ✅ Retrieve the User object
 
-        String accessToken = jwtUtils.generateToken(user.getEmail());
-        String refreshToken = jwtUtils.generateRefreshToken(userDetails);
+            // Get user profile
+            UserProfile profile;
+            try {
+                profile = profileService.getProfileByUser(user);
+            } catch (CustomException e) {
+                profile = null; // Profile not found
+            }
 
-        // Save refresh token to user
-        user.setRefreshToken(refreshToken);
-        userRepository.save(user);
+            String accessToken = jwtUtils.generateToken(user.getEmail());
+            String refreshToken = jwtUtils.generateRefreshToken(userDetails);
 
-        return ResponseEntity.ok(
-                new AuthResponse(
-                        accessToken,
-                        refreshToken,
-                        user.getId(),
-                        user.getEmail(),
-                        user.getRole()
-                )
-        );
+            // Save refresh token to user
+            user.setRefreshToken(refreshToken);
+            userRepository.save(user);
+
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("accessToken", accessToken);
+            responseData.put("refreshToken", user.getRefreshToken());
+            responseData.put("userId", user.getId());
+            responseData.put("email", user.getEmail());
+            responseData.put("role", user.getRole());
+            responseData.put("profile", profile);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            "User successfully logged in",
+                            HttpStatus.OK.value(),
+                            responseData
+                    )
+            );
+        } catch (CustomException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(e.getMessage(), HttpStatus.BAD_REQUEST.value(), null));
+        }
     }
 
     @PostMapping("/refresh")

@@ -42,10 +42,13 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/v3/api-docs/**",       // Allow API Docs
                                 "/swagger-ui/**",        // Allow Swagger UI
-                                "/swagger-ui.html"       // Allow Swagger HTML
+                                "/swagger-ui.html",       // Allow Swagger HTML
+                                "/api/create-user-profile"
                         ).permitAll()
                         .requestMatchers("/api/professional/**").hasRole("PROFESSIONAL")
                         .anyRequest().authenticated()
+//                        .requestMatchers("/api/profiles/**").authenticated()
+//                        .requestMatchers("/api/assessments/**").authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

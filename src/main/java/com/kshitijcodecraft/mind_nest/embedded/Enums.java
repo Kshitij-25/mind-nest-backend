@@ -1,4 +1,4 @@
-package com.kshitijcodecraft.mind_nest.enums;
+package com.kshitijcodecraft.mind_nest.embedded;
 
 public class Enums {
 

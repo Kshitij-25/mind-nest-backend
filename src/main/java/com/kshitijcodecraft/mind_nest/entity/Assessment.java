@@ -3,19 +3,42 @@ package com.kshitijcodecraft.mind_nest.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.Set;
 
-@Data
+// Assessment.java
 @Entity
+@Data
 public class Assessment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private int score;
-    private LocalDateTime timestamp;
-    private String assessmentType; // e.g., "PHQ-9", "GAD-7"
-    private String responses; // JSON string of user's answers (optional)
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
     private User user;
+
+    private LocalDateTime timestamp;
+
+    // Screening Scores
+    private int phq9Score;
+    private int gad7Score;
+    private int functionalImpactScore;
+
+    // Risk Assessment
+    private boolean selfHarmThoughts;
+    private boolean selfHarmPlan;
+    private boolean suicideHistory;
+    private boolean unsafeEnvironment;
+
+    // Treatment History
+    private boolean currentTreatment;
+    private String diagnosisHistory;
+    private String currentMedication;
+
+    // Goals
+    @ElementCollection
+    private Set<String> therapyGoals;
+
+    // System Fields
+    private String riskLevel; // LOW, MODERATE, HIGH, CRISIS
+    private String recommendations;
 }
