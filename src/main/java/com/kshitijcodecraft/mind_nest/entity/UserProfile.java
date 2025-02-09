@@ -6,13 +6,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.kshitijcodecraft.mind_nest.embedded.EmergencyContact;
 import com.kshitijcodecraft.mind_nest.embedded.TherapyPreferences;
 
-import jakarta.persistence.Embedded;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Entity
@@ -30,6 +25,7 @@ public class UserProfile {
 
     // Personal Information
     private String fullName;
+    @Column(length = 2048)
     private String profilePicUrl;
     private LocalDate dateOfBirth;
     private String genderIdentity;
