@@ -142,7 +142,12 @@ public class AuthController {
                     .body(new ApiResponse<>("Invalid token", HttpStatus.BAD_REQUEST.value(), null));
         }
 
-        tokenBlacklistService.blacklistToken(token);
+//        tokenBlacklistService.blacklistToken(token);
+        tokenBlacklistService.blacklistToken(token, jwtUtils.extractExpiration(token));
+
+//        user.setRefreshToken(null);
+//        userRepository.save(user);
+
         return ResponseEntity.ok(
                 new ApiResponse<>("Logout successful", HttpStatus.OK.value(), null)
         );

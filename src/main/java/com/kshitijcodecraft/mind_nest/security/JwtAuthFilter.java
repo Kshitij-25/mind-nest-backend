@@ -37,12 +37,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             String jwt = jwtUtils.parseJwt(request);
             if (jwt != null && jwtUtils.validateToken(jwt)) {
-                if (tokenBlacklistService.isBlacklisted(jwt)) {
-                    // Token is blacklisted, respond with 401 Unauthorized
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("Token is invalid or blacklisted.");
-                    return;
-                }
+//                if (tokenBlacklistService.isBlacklisted(jwt)) {
+//                    // Token is blacklisted, respond with 401 Unauthorized
+//                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+//                    response.getWriter().write("Token is invalid or blacklisted.");
+//                    return;
+//                }
 
                 String username = jwtUtils.extractUsername(jwt);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);

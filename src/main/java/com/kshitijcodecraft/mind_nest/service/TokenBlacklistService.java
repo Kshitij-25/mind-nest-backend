@@ -1,32 +1,37 @@
 package com.kshitijcodecraft.mind_nest.service;
 
+import com.kshitijcodecraft.mind_nest.entity.BlacklistedToken;
+import com.kshitijcodecraft.mind_nest.repository.BlacklistedTokenRepository;
 import com.kshitijcodecraft.mind_nest.security.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class TokenBlacklistService {
-    private final RedisTemplate<String, String> redisTemplate;
-    private final JwtUtils jwtUtils;
 
-    public void blacklistToken(String token) {
-        Date expiration = jwtUtils.extractExpiration(token);
-        long ttl = expiration.getTime() - System.currentTimeMillis();
+    private final BlacklistedTokenRepository repository;
 
-        redisTemplate.opsForValue().set(
-                token,
-                "blacklisted",
-                ttl,
-                TimeUnit.MILLISECONDS
-        );
+    public void blacklistToken(String token, Date expiry) {
+        BlacklistedToken entity = new BlacklistedToken();
+        entity.setToken(token);
+        entity.setExpiry(expiry.toInstant());
+        repository.save(entity);
     }
 
-    public boolean isBlacklisted(String token) {
-        return Boolean.TRUE.equals(redisTemplate.hasKey(token));
+    public boolean isTokenBlacklisted(String token) {
+        return repository.existsByToken(token);
+    }
+
+    // Scheduled cleanup (optional)
+    @Scheduled(cron = "0 0 * * * *") // every hour
+    public void cleanUpExpiredTokens() {
+        repository.deleteExpiredTokens(Instant.now());
     }
 }
